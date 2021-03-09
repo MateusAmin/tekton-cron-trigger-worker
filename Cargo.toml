@@ -1,5 +1,5 @@
 [package]
-name = "tk-cron-trg-worker"
+name = "tk-cron-worker"
 version = "0.3.0"
 authors = ["mea <mateus.amin@mea.services>"]
 edition = "2018"

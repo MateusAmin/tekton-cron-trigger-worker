@@ -1,0 +1,96 @@
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: github
+spec:
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: pipeline-run-
+        namespace: default
+      spec:
+        serviceAccountName: build
+        pipelineRef:
+          name: build
+        timeout: 1h0m0s
+        workspaces:
+        - name: shared-data
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+              - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 4Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-webhook
+type: Opaque
+stringData:
+  secretToken: "somethinggoeshere"
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: github
+spec:
+  triggers:
+    - name: cron-trig
+      interceptors:
+          - cel:
+              filter: "header.match('cron', 'true')"
+      template:
+        ref: github
+  resources:
+    kubernetesResource:
+      spec:
+        template:
+          spec:
+            serviceAccountName: tektontriggersa
+            containers:
+              - resources:
+                  requests:
+                    memory: "64Mi"
+                    cpu: "250m"
+                  limits:
+                    memory: "128Mi"
+                    cpu: "500m"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: build
+secrets:
+  - name: ssh-key
+
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: ssh-key-
+#   annotations:
+#     tekton.dev/git-0: github.com
+# type: kubernetes.io/ssh-auth
+# data:
+#   ssh-privatekey: 
+  
+#   known_hosts:
+
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: trigger-all
+spec:
+  schedule: "0 9 * * 1"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: trigger-all
+            image: tk-cron-worker
+          restartPolicy: Never
