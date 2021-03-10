@@ -4,9 +4,7 @@ FROM ekidd/rust-musl-builder AS builder
 
 COPY --chown=rust:rust ./ ./
 RUN cargo build --release --target x86_64-unknown-linux-musl
-
-RUN cargo install --force cargo-strip
-RUN cargo strip
+RUN strip /home/rust/src/target/x86_64-unknown-linux-musl/release/tk-cron-worker
 
 FROM scratch
 COPY --from=builder \
